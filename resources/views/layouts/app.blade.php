@@ -62,7 +62,9 @@
 </head>
 <body>
 
-@include('layouts.navbar')
+@if(!Route::is('kiosk.scan'))
+    @include('layouts.navbar')
+@endif
 
 <div class="container pb-5">
     @yield('content')

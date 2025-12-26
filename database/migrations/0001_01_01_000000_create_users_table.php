@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->string('name');
             $table->string('udomain')->unique();
             $table->string('password');
-            $table->text('face_image_path');
+            $table->longText('face_embedding')->nullable();
             $table->timestamps();
         });
     }

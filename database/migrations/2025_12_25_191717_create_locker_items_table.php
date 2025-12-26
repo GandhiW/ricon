@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('locker_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('locker_id')
-                  ->constrained('locker_sessions')
-                  ->cascadeOnDelete();
+            $table->foreignId('locker_session_id')->constrained('locker_sessions')->cascadeOnDelete();
             $table->string('item_name');
             $table->text('item_detail')->nullable();
-            $table->timestamp('added_at')->nullable();
+            $table->string('key')->unique()->nullable(); // The QR string
+            $table->boolean('opened_by_sender')->default(1); // 1 = Fresh, 0 = Used
+            $table->string('qr_path')->nullable(); // For your Laravel dashboard
             $table->timestamps();
         });
     }

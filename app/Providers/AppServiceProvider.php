@@ -25,5 +25,6 @@ class AppServiceProvider extends ServiceProvider
     {
         LockerItem::observe(LockerItemObserver::class);
         LockerSession::observe(LockerSessionObserver::class);
+        \App\Models\LockerItem::observe(\App\Observers\LockerItemObserver::class);
     }
 }

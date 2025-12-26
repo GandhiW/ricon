@@ -15,7 +15,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'udomain',
         'password',
-        'face_image_path',
+        'face_embedding', // Essential for the enrollment script
     ];
 
     protected $hidden = [

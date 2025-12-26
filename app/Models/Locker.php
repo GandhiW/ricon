@@ -10,7 +10,14 @@ class Locker extends Model
         'status',
     ];
 
-    public function sessions() {
+    public function sessions()
+    {
         return $this->hasMany(LockerSession::class);
+    }
+
+    public function items()
+    {
+        // Access items via the session link
+        return $this->hasManyThrough(LockerItem::class, LockerSession::class);
     }
 }
