@@ -44,6 +44,10 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    public function assignedSessions() {
+        return $this->hasMany(LockerSession::class, 'assigned_taker_id');
+    }
+
     // ROLE CHECKS
     public function isUser()
     {

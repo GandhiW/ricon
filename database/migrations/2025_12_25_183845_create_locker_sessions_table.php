@@ -20,7 +20,7 @@ return new class extends Migration
                   ->constrained('users')
                   ->cascadeOnDelete();
             $table->foreignId('assigned_taker_id')->nullable()
-                  ->constrained('takers')->nullOnDelete();
+                  ->constrained('users')->nullOnDelete();
             $table->string('taken_by')->nullable();
             // $table->foreignId('taken_by')->nullable()
             //       ->constrained('takers')->nullOnDelete();
