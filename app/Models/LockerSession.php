@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class LockerSession extends Model
 {
-      protected $fillable = [
+    protected $fillable = [
         'locker_id',
         'user_id',
         'assigned_taker_id',
@@ -38,6 +38,6 @@ class LockerSession extends Model
 
     public function items()
     {
-        return $this->hasMany(LockerItem::class, 'locker_id');
+        return $this->hasMany(LockerItem::class, 'locker_session_id');
     }
 }

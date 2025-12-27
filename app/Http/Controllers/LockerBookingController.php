@@ -48,7 +48,8 @@ class LockerBookingController extends Controller
             //Create locker session
             $session = LockerSession::create([
                 'locker_id' => $locker->id,
-                'user_id'   => Auth::id(),
+                // 'user_id'   => Auth::id(),
+                'user_id'   => 1,
                 'status'    => 'active',
             ]);
 
@@ -57,7 +58,6 @@ class LockerBookingController extends Controller
                 'locker_id'   => $session->id, // FK ke locker_sessions
                 'item_name'   => $request->item_name,
                 'item_detail' => $request->item_detail,
-                'added_at'    => now(),
             ]);
 
             //Update locker status
@@ -67,7 +67,7 @@ class LockerBookingController extends Controller
         });
 
         return redirect()
-            ->route('index')
+            ->route('book.index')
             ->with('success', 'Loker berhasil disewa');
     }
 
@@ -84,7 +84,7 @@ class LockerBookingController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        
     }
 
     /**

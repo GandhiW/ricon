@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class LockerItem extends Model
 {
     protected $fillable = [
+        'locker_session_id',
         'locker_id',
         'item_name',
         'item_detail',
+        'key',
+        'opened_by_sender',
+        'qr_path', // Add this here
         'added_at',
     ];
 

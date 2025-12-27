@@ -12,10 +12,12 @@ class HistoryController extends Controller
      */
     public function index()
     {
-        $bookings = LockerSession::with(['user', 'locker', 'assignedTaker', 'items'])->get();
+        // $bookings = LockerSession::with(['user', 'locker', 'assignedTaker', 'items'])->get();
 
-        dd($bookings);
-        return view('history', compact('bookings'));
+        // dd($bookings);
+        // return view('history', compact('bookings'));
+
+        return view('history');
     }
 
     /**

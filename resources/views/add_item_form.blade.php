@@ -83,48 +83,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     {{-- HEADER --}}
     <div class="hero d-flex justify-content-betweenb-0 align-items-center m">
-        <h1 class="fw-bold">Sewa Loker</h1>
+        <h1 class="fw-bold">Tambah Barang</h1>
     </div>
 
-    <form method="POST" action="{{ route('book.store') }}">
+    <form method="POST" action="{{ route('book.update') }}">
     @csrf
-
-        {{-- PILIH LOKER --}}
-
-<div class="card p-4 mb-4">
-    <h5 class="mb-3 fw-semibold">Pilih Loker</h5>
-
-    <div class="locker-wrapper">
-        <div class="locker-grid">
-
-            @foreach ($lockers as $locker)
-             <div
-                    class="locker {{ $locker->status === 'available' ? 'available' : 'not-available' }}"
-                    data-id="{{ $locker->id }}"
-                    data-status="{{ $locker->status }}"
-                >
-                    {{ $locker->id }}
-                </div>
-            @endforeach
-        </div>
-
-        <div class="locker-legend">
-            <div class="legend-item">
-                <span class="legend-box" style="background:#4CAF50"></span>
-                <span>Tersedia</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-box" style="background:#D9534F"></span>
-                <span>Tidak Tersedia</span>
-            </div>
-        </div>
-    </div>
-
-    <input type="hidden" name="locker_id" id="locker_id">
-</div>
-
-
-
         {{-- INFORMASI ITEM --}}
         <div class="card p-4 mb-4">
             <h5 class="mb-3 fw-semibold">Informasi Barang</h5>
@@ -139,20 +102,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input type="text"  name="item_detail" class="form-control" placeholder="Contoh: Ayam gembus pak gepuk 2 porsi">
             </div>
         </div>
-
-        {{-- CATATAN --}}
-        <div class="card p-4 mb-4">
-            <h5 class="mb-3 fw-semibold">Catatan</h5>
-            <ul class="mb-0">
-                <li>Jika loker tidak terisi dalam waktu 2 jam, maka sewa loker akan otomatis selesai.</li>
-                <li>Loker hanya dapat diakses menggunakan QR Code atau Face Recognition oleh pengguna yang terdaftar.</li>
-            </ul>
-        </div>
-
         {{-- SUBMIT --}}
         <div class="text-center">
             <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
-                Konfirmasi & Sewa
+                Tambah Barang
             </button>
         </div>
 

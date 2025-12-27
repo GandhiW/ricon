@@ -17,13 +17,13 @@ class LockerItemSeeder extends Seeder
         $session = LockerSession::where('status', 'active')->first();
 
         LockerItem::create([
-            'locker_id' => $session->id,
+            'locker_session_id' => $session->id,
             'item_name' => 'Laptop',
             'item_detail' => 'MacBook Pro 14-inch',
         ]);
 
         LockerItem::create([
-            'locker_id' => $session->id,
+            'locker_session_id' => $session->id,
             'item_name' => 'Backpack',
             'item_detail' => 'Black backpack with charger',
         ]);
