@@ -14,9 +14,9 @@ class Taker extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function assignedSessions() {
-        return $this->hasMany(LockerSession::class, 'assigned_taker_id');
-    }
+    // public function assignedSessions() {
+    //     return $this->hasMany(LockerSession::class, 'assigned_taker_id');
+    // }
 
     // public function takenSessions() {
     //     return $this->hasMany(LockerSession::class, 'taken_by');
