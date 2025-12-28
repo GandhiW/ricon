@@ -127,7 +127,7 @@ class LockerBookingController extends Controller
         ]);
 
         return DB::transaction(function () use ($request) {
-            // Cari loker yang tersedia 
+            // Cari loker yang tersedia
             $locker = Locker::where('id', $request->locker_id)
                 ->where('status', 'available')
                 ->lockForUpdate()
@@ -223,7 +223,7 @@ class LockerBookingController extends Controller
         // ->with('success', 'Item berhasil ditambahkan');
 
         // gres test
-       // Validasi input
+        // Validasi input
         $request->validate([
             'item_name' => 'required|string',
         ]);
@@ -318,5 +318,55 @@ class LockerBookingController extends Controller
         return redirect()
             ->route('dashboard')
             ->with('success', 'Loker berhasil dilepaskan. Anda dapat memesan loker kembali.');
+    }
+
+    public function verifyQrCode(Request $request)
+    {
+        // 1. Forward the image to the Python AI Server for decoding only
+        try {
+            $response = Http::attach(
+                'images',
+                file_get_contents($request->file('images')),
+                'frame.jpg'
+            )->post('http://localhost:5000/recognize');
+
+            if (!$response->successful()) {
+                return response()->json(['error' => 'AI Server Error'], 500);
+            }
+
+            $data = $response->json();
+
+            // Check if Python returned a raw QR key
+            if (isset($data[0]['type']) && $data[0]['type'] === 'qr_raw') {
+                $qrKey = $data[0]['key'];
+
+                // 2. Perform Database Logic in Laravel
+                $item = LockerItem::where('key', $qrKey)
+                    ->with('session') // Get the session to find locker_id
+                    ->first();
+
+                if (!$item) {
+                    return response()->json([['type' => 'qr_error', 'result' => 'QR Key Tidak Valid']]);
+                }
+
+                // Check if already opened (1 = Fresh/Unopened, 0 = Used)
+                if ($item->opened_by_sender == 0) {
+                    return response()->json([['type' => 'qr_error', 'result' => 'Loker ini sudah pernah dibuka']]);
+                }
+
+                // 3. Success: Update status and return the locker_id
+                $item->update(['opened_by_sender' => 0]);
+
+                return response()->json([[
+                    'type' => 'qr_success',
+                    'locker_id' => $item->session->locker_id
+                ]]);
+            }
+
+            // If it wasn't a QR, return the original data (for face recognition fallback)
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Connection to AI Server failed'], 500);
+        }
     }
 }

@@ -95,22 +95,10 @@ def recognize():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # STEP A: QR DETECTION
+        # STEP A: ONLY DECODE QR
         qr_data, points, _ = qr_detector.detectAndDecode(img)
         if qr_data:
-            cursor.execute("SELECT id, locker_id, opened_by_sender FROM locker_items WHERE `key` = %s", (qr_data,))
-            item = cursor.fetchone()
-
-            if item:
-                # FIX: If 1 means "Available/Not Opened", we allow the open and set to 0
-                if item['opened_by_sender'] == 0:
-                    return jsonify([{"type": "qr_error", "result": "Loker ini sudah pernah dibuka oleh pengirim"}])
-
-                cursor.execute("UPDATE locker_items SET opened_by_sender = 1 WHERE id = %s", (item['id'],))
-                conn.commit()
-                return jsonify([{"type": "qr_success", "result": "QR Verified", "locker_id": item['locker_id']}])
-
-            return jsonify([{"type": "qr_error", "result": "QR Key Tidak Valid"}])
+            return jsonify([{"type": "qr_raw", "key": qr_data}])
 
         # STEP B: FACE RECOGNITION FALLBACK
         # Threshold adjusted to 0.45 for better security on buffalo_l
