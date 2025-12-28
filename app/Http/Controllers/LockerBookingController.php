@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-
 //
 
 class LockerBookingController extends Controller
@@ -62,7 +61,7 @@ class LockerBookingController extends Controller
         //     ]);
 
         //     //Create locker item
-        //     LockerItem::create([
+        //     $lockerItem = LockerItem::create([
         //         'locker_session_id'   => $session->id, // FK ke locker_sessions
         //         'item_name'   => $request->item_name,
         //         'item_detail' => $request->item_detail,
@@ -79,48 +78,56 @@ class LockerBookingController extends Controller
         //     ->with('success', 'Loker berhasil disewa');
 
 
-
         //gres test
         $request->validate([
-        'locker_id' => 'required|exists:lockers,id',
-        'item_name' => 'required|string',
-    ]);
-
-    $session = DB::transaction(function () use ($request) {
-
-        // Lock locker
-        $locker = Locker::where('id', $request->locker_id)
-            ->where('status', 'available')
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        // Create session
-        $session = LockerSession::create([
-            'locker_id' => $locker->id,
-            'user_id'   => Auth::id(),
-            'status'    => 'active',
+            'locker_id' => 'required|exists:lockers,id',
+            'item_name' => 'required|string',
         ]);
 
-        // CREATE ITEM PERTAMA + QR
-        LockerItem::create([
-            'locker_session_id' => $session->id,
-            'item_name'         => $request->item_name,
-            'item_detail'       => $request->item_detail,
-            'key'               => Str::uuid()->toString(), 
-        ]);
+        $session = DB::transaction(function () use ($request) {
 
-        // Update locker
-        $locker->update([
-            'status' => 'occupied',
-        ]);
+            // Lock locker
+            $locker = Locker::where('id', $request->locker_id)
+                ->where('status', 'available')
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $session;
-    });
+            // Create session
+            $session = LockerSession::create([
+                'locker_id' => $locker->id,
+                'user_id'   => Auth::id(),
+                'status'    => 'active',
+            ]);
 
-    return redirect()
-        ->route('booking.show', $session->id)
-        ->with('show_qr', true);
+            // CREATE ITEM PERTAMA + QR
+            LockerItem::create([
+                'locker_session_id' => $session->id,
+                'item_name'         => $request->item_name,
+                'item_detail'       => $request->item_detail,
+                'key'               => Str::uuid()->toString(),
+            ]);
 
+            // Update locker
+            $locker->update([
+                'status' => 'occupied',
+            ]);
+
+            return $session;
+        });
+
+        return redirect()
+            ->route('booking.show', $session->id)
+            ->with('show_qr', true);
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(LockerSession $booking)
+    {
+        // Diambil dari kode baru
+        $booking->load('items');
+        return view('manage_locker', compact('booking'));
     }
 
     /**
@@ -129,9 +136,9 @@ class LockerBookingController extends Controller
     public function edit(string $id)
     {
         $booking = LockerSession::where('user_id', Auth::id())
-        ->where('status', 'active')
-        ->latest()
-        ->first();
+            ->where('status', 'active') // atau booked
+            ->latest()
+            ->first();
         return view('add_item_form', compact('booking'));
     }
 
@@ -140,18 +147,19 @@ class LockerBookingController extends Controller
      */
     public function update(Request $request, string $id)
     {
-         //Create locker item
-            // LockerItem::create([
-            //     'locker_session_id'   => $id, // FK ke locker_sessions
-            //     'item_name'   => $request->item_name,
-            //     'item_detail' => $request->item_detail,
-            // ]);
+        //Create locker item
+        // LockerItem::create([
+        //     'locker_session_id'   => $id, // FK ke locker_sessions
+        //     'item_name'   => $request->item_name,
+        //     'item_detail' => $request->item_detail,
+        // ]);
 
-            //  return redirect()
-            // ->route('dashboard')
-            // ->with('success', 'Item berhasil ditambahkan');
+        // return redirect()
+        // ->route('dashboard')
+        // ->with('success', 'Item berhasil ditambahkan');
 
-         $request->validate([
+        // gres test (Logika update baru dengan UUID)
+        $request->validate([
             'item_name' => 'required|string',
         ]);
 
@@ -160,27 +168,25 @@ class LockerBookingController extends Controller
             'item_name'         => $request->item_name,
             'item_detail'       => $request->item_detail,
             'key'               => Str::uuid()->toString(),
-
         ]);
 
-       return redirect()
-        ->route('booking.show', $id)
-        ->with('success', 'Item berhasil ditambahkan')
-        ->with('show_qr', true);
-
+        return redirect()
+            ->route('booking.show', $id)
+            ->with('success', 'Item berhasil ditambahkan')
+            ->with('show_qr', true);
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(string $id)
     {
         //
     }
 
-
-
     public function showAssignUserForm(LockerSession $booking)
     {
         $users = User::orderBy('name')->get();
-
         return view('assign_taker', compact('booking', 'users'));
     }
 
@@ -199,12 +205,27 @@ class LockerBookingController extends Controller
             ->with('success', 'Berhasil menambahkan user untuk mengambil barang');
     }
 
-    public function show(LockerSession $booking)
+    public function releaseLocker(LockerSession $booking)
     {
-        $booking->load('items');
+        // Pastikan yang melepas adalah pemilik booking
+        if ($booking->user_id !== Auth::id()) {
+            abort(403);
+        }
 
-        return view('manage_locker', compact('booking'));
+        DB::transaction(function () use ($booking) {
+            // 1. Expire locker session
+            $booking->update([
+                'status' => 'expired',
+            ]);
 
+            // 2. Kembalikan locker jadi available
+            $booking->locker()->update([
+                'status' => 'available',
+            ]);
+        });
+
+        return redirect()
+            ->route('dashboard')
+            ->with('success', 'Loker berhasil dilepaskan. Anda dapat memesan loker kembali.');
     }
-
 }

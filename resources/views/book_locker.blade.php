@@ -4,6 +4,48 @@
 
 @push('styles')
     <style>
+        .btn.btn-blue {
+            background-color: #22396C;
+            color: #ffffff;
+            border: none;
+            border-radius: 18px;
+            padding: 14px 32px;
+            font-size: 20px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.25s ease;
+        }
+
+        /* HOVER */
+        .btn.btn-blue:hover:not(:disabled) {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+        /* DISABLED */
+        .btn.btn-blue:disabled {
+            background-color: #22396C !important;
+            color: #ffffff !important;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* SAAT DIKLIK (ACTIVE) */
+        .btn.btn-blue:active,
+        .btn.btn-blue.active,
+        .btn.btn-blue:focus,
+        .btn.btn-blue:focus-visible {
+            background-color: #22396C !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+            outline: none !important;
+            transform: none;
+        }
+
+        .card .form-control::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
         .locker-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, 90px);
@@ -76,6 +118,38 @@
             });
         });
     </script>
+
+    {{-- validasi form required --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const lockerInput = document.getElementById('locker_id');
+            const itemName = document.querySelector('input[name="item_name"]');
+            const itemDetail = document.querySelector('input[name="item_detail"]');
+            const submitBtn = document.getElementById('submitBtn');
+
+            function validateForm() {
+                if (
+                    lockerInput.value &&
+                    itemName.value.trim() !== '' &&
+                    itemDetail.value.trim() !== ''
+                ) {
+                    submitBtn.disabled = false;
+                } else {
+                    submitBtn.disabled = true;
+                }
+            }
+
+            // cek saat input diketik
+            itemName.addEventListener('input', validateForm);
+            itemDetail.addEventListener('input', validateForm);
+
+            // cek saat locker dipilih
+            document.querySelectorAll('.locker.available').forEach(locker => {
+                locker.addEventListener('click', validateForm);
+            });
+        });
+    </script>
+
 @endpush
 
 @section('content')
@@ -119,7 +193,7 @@
                     </div>
                 </div>
 
-                <input type="hidden" name="locker_id" id="locker_id">
+                <input type="hidden" name="locker_id" id="locker_id" required>
             </div>
 
 
@@ -130,13 +204,13 @@
 
                 <div class="mb-3">
                     <label class="form-label">Nama Barang</label>
-                    <input type="text" name="item_name" class="form-control" placeholder="Contoh: Nasi ayam">
+                    <input type="text" name="item_name" class="form-control" placeholder="Contoh: Nasi ayam" required>
                 </div>
 
                 <div>
                     <label class="form-label">Detail Barang</label>
                     <input type="text" name="item_detail" class="form-control"
-                        placeholder="Contoh: Ayam gembus pak gepuk 2 porsi">
+                        placeholder="Contoh: Ayam gembus pak gepuk 2 porsi" required>
                 </div>
             </div>
 
@@ -152,7 +226,12 @@
 
             {{-- SUBMIT --}}
             <div class="text-center">
-                <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
+                <button
+                    type="submit"
+                    id="submitBtn"
+                    class="btn btn-blue px-5 py-2 fw-semibold"
+                    disabled
+                >
                     Konfirmasi & Sewa
                 </button>
             </div>

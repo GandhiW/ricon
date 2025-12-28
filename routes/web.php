@@ -31,6 +31,7 @@ Route::post('/login', function (\Illuminate\Http\Request $request) {
 
 
 Route::middleware('auth')->group(function() {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/{id}', [NotificationController::class, 'show']);
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
@@ -39,6 +40,8 @@ Route::middleware('auth')->group(function() {
     Route::resource('/booking', LockerBookingController::class);
     Route::put('/booking/{booking}/assign-user', [LockerBookingController::class, 'assignUser'])->name('booking.assignUser');
     Route::get('/booking/{booking}/assign-user', [LockerBookingController::class, 'showAssignUserForm'])->name('booking.showAssignUserForm');
+    Route::post('/booking/{booking}/release', [LockerBookingController::class, 'releaseLocker'])->name('booking.release');
+
 });
 
 Route::get('/kiosk', function () {
@@ -50,10 +53,6 @@ Route::get('/users/{user}/active-lockers', function ($userId) {
         ->where('status', 'active')
         ->get(['locker_id']);
 });
-
-
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-
 
 // HISTORY (SESSION-BASED)
 Route::resource('/history', HistoryController::class)
