@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function() {
     Route::get('/notifications/{id}', [NotificationController::class, 'show']);
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::get('/locker-session/{session}/taken-notif', [NotificationController::class, 'itemTakenNotificationOnly']);
+    Route::get('/locker-item/{item}/delivered', [NotificationController::class, 'itemDeliveredNotification']);
     Route::get('/notifications/booking', [NotificationController::class, 'indexBookingNotifications']);
     Route::resource('/booking', LockerBookingController::class);
     Route::put('/booking/{booking}/assign-user', [LockerBookingController::class, 'assignUser'])->name('booking.assignUser');
@@ -48,7 +49,8 @@ Route::get('/kiosk', function () {
     return view('layouts.kiosk');
 })->name('kiosk.scan');
 
-Route::get('/users/{user}/active-lockers', function ($userId) {
+
+Route::get('/users/{userId}/active-lockers', function ($userId) {
     return LockerSession::where('status', 'active')
         ->where(function ($query) use ($userId) {
             $query->where('user_id', $userId)
@@ -60,3 +62,5 @@ Route::get('/users/{user}/active-lockers', function ($userId) {
 // HISTORY (SESSION-BASED)
 Route::resource('/history', HistoryController::class)
     ->middleware('auth');
+
+Route::post('/verify-qr', [LockerBookingController::class, 'verifyQrCode'])->name('qr.verify');

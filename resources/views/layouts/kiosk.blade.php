@@ -257,9 +257,13 @@
                 formData.append('images', blob, 'frame.jpg');
 
                 try {
-                    const response = await fetch('http://localhost:5000/recognize', {
+                    const response = await fetch("{{ route('qr.verify') }}", {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        headers: {
+                            // Laravel requires a CSRF token for POST requests
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
                     });
 
                     if (response.ok) {

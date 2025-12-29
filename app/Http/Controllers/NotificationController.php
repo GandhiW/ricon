@@ -39,8 +39,9 @@ class NotificationController extends Controller
             ],
 
             'session' => [
-                'session_code' => $notification->lockerItem?->session?->session_code,
                 'status' => $notification->lockerItem?->session?->status,
+                'taken_at' => $notification->lockerItem?->session?->taken_at,
+                'ended_at' => $notification->lockerItem?->session?->ended_at,
             ],
 
             'locker' => [
@@ -62,47 +63,55 @@ class NotificationController extends Controller
         ]);
     }
 
+    // =============== BARANG DIAMBIL ===============
     public function itemTakenNotificationOnly(LockerSession $session)
     {
-        // Safety check jika session tidak ditemukan
         if (!$session) {
             return response()->json(['message' => 'Session not found'], 404);
         }
 
-        // Ambil nama taker, default "Unknown" kalau null
         $takenByName = optional($session->assignedTaker)->name ?? 'Unknown';
-
-        // Gabung semua nama item, default "Barang" kalau kosong
         $itemNames = $session->items?->pluck('item_name')->implode(', ') ?? 'Barang';
-
-        // Locker code, default "Unknown"
-        $lockerCode = optional($session->locker)->locker_code ?? 'Unknown';
-
-        $firstItemId = $session->items->first()?->id ?? null;
+        $lockerCode = optional($session->locker)->id ?? 'Unknown';
 
         Notification::create([
             'user_id' => $session->user_id,
-            'locker_item_id' => $firstItemId, // <- pastikan ini diisi atau kolom nullable
+            'locker_item_id' => null,
             'type' => 'item_taken',
             'title' => "Barang ({$itemNames}) di locker {$lockerCode} telah diambil oleh {$takenByName}",
             'data' => [
                 'taken_by' => $takenByName,
                 'taken_at' => $session->taken_at,
-                'locker_session_id' => $session->id,
             ],
             'is_read' => false,
         ]);
 
         return response()->json([
-            'message' => 'Taken notification sent for the session'
+            'message' => 'Taken notification sent'
         ]);
     }
 
-    public function indexBookingNotifications()
+    public function itemDeliveredNotification(LockerItem $item)
     {
-        return \App\Models\Notification::where('user_id', Auth::id())
-            ->where('title', 'like', '%berhasil dibooking%') // filter kata booking
-            ->latest()
-            ->get();
+        if (!$item || !$item->session) {
+            return null;
+        }
+
+        if ((int)$item->opened_by_sender !== 0) {
+            return null; 
+        }
+
+        return Notification::create([
+            'user_id' => $item->session->user_id,
+            'locker_item_id' => $item->id,
+            'type' => 'item_delivered',
+            'title' => "Barang '{$item->item_name}' telah masuk ke loker",
+            'data' => [
+                'item_name' => $item->item_name,
+                'item_detail' => $item->item_detail,
+                'added_at' => $item->created_at,
+            ],
+            'is_read' => false
+        ]);
     }
 }

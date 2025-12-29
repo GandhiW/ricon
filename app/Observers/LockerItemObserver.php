@@ -38,19 +38,26 @@ class LockerItemObserver
      */
     public function updated(LockerItem $item): void
     {
-        // -------- Notif saat barang masuk ke locker --------
-        if ($item->wasChanged('added_at') && $item->added_at !== null) {
-            $itemName = $item->item_name ?? 'Barang';
-            $userId   = optional($item->session)->user_id;
+        $item->load('session');
+        $userId = optional($item->session)->user_id;
 
-            if ($userId) {
-                Notification::create([
-                    'user_id'        => $userId,
-                    'locker_item_id' => $item->id,
-                    'title'          => "{$itemName} telah masuk ke locker",
-                    'is_read'        => false,
-                ]);
-            }
+        if (
+            (int)$item->opened_by_sender === 0
+            && $userId
+            && !Notification::where('locker_item_id', $item->id)->exists()
+        ) {
+
+            Notification::create([
+                'user_id' => $userId,
+                'locker_item_id' => $item->id,
+                'title' => "Barang {$item->item_name} telah masuk ke loker",
+                'data' => [
+                    'item_name' => $item->item_name,
+                    'item_detail' => $item->item_detail,
+                    'added_at' => $item->created_at,
+                ],
+                'is_read' => false
+            ]);
         }
     }
 
