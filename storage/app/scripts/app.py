@@ -22,18 +22,30 @@ db_config = {
 }
 
 # --- 2. INITIALIZE MODELS ---
-# Optimized for your RTX 3050
-app_model = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+app_model = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 app_model.prepare(ctx_id=0, det_size=(640, 640))
 qr_detector = cv2.QRCodeDetector()
 
 def get_db_connection():
     return mysql.connector.connect(**db_config)
 
-# Use relative paths or environment variables to avoid hardcoding C:/ paths
 QR_STORAGE_PATH = os.path.join(os.getcwd(), "public", "qrcodes")
 if not os.path.exists(QR_STORAGE_PATH):
     os.makedirs(QR_STORAGE_PATH)
+
+# --- 3. SILENCE & UTILITY ROUTES ---
+
+@app.route('/')
+def index():
+    """Health check route to prevent 404 when accessing root"""
+    return jsonify({"status": "API Active", "model": "buffalo_l"}), 200
+
+@app.route('/favicon.ico')
+def favicon():
+    """Silence browser favicon requests"""
+    return '', 204
+
+# --- 4. FUNCTIONAL ROUTES ---
 
 @app.route('/generate', methods=['GET'])
 def generate_qr():
@@ -69,7 +81,6 @@ def recognize():
             item = cursor.fetchone()
 
             if item:
-                # FIX: If 0 means "Available/Not Opened", we allow the open and set to 1
                 if item['opened_by_sender'] == 1:
                     return jsonify([{"type": "qr_error", "result": "Loker ini sudah pernah dibuka oleh pengirim"}])
 
@@ -80,7 +91,6 @@ def recognize():
             return jsonify([{"type": "qr_error", "result": "QR Key Tidak Valid"}])
 
         # STEP B: FACE RECOGNITION FALLBACK
-        # Threshold adjusted to 0.45 for better security on buffalo_l
         best_name, best_id, min_dist = "STRANGER", None, 0.45
         faces = app_model.get(img)
 
@@ -100,4 +110,5 @@ def recognize():
         conn.close()
 
 if __name__ == '__main__':
+    # Using 0.0.0.0 allows access from your S25 Ultra if it's on the same Wi-Fi
     app.run(host='0.0.0.0', port=5000, debug=False)
