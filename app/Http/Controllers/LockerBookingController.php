@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+
+use function Symfony\Component\Clock\now;
+
 //
 
 class LockerBookingController extends Controller
@@ -100,6 +103,7 @@ class LockerBookingController extends Controller
                 'status' => 'occupied',
             ]);
 
+            // dd($session->id);
             return redirect()
                 ->route('booking.show', $session->id)
                 ->with('show_qr', true);
@@ -124,9 +128,10 @@ class LockerBookingController extends Controller
     public function edit(string $id)
     {
         $booking = LockerSession::where('user_id', Auth::id())
-            ->where('status', 'active') // atau booked
+            ->where('status', 'active')
             ->latest()
             ->first();
+        // dd($booking);
         return view('add_item_form', compact('booking'));
     }
 
@@ -246,7 +251,6 @@ class LockerBookingController extends Controller
 
     public function verifyQrCode(Request $request)
     {
-        // 1. Forward the image to the Python AI Server for decoding only
         try {
             $response = Http::attach(
                 'images',
@@ -260,34 +264,33 @@ class LockerBookingController extends Controller
 
             $data = $response->json();
 
-            // Check if Python returned a raw QR key
+            // Check if AI returned a raw QR key
             if (isset($data[0]['type']) && $data[0]['type'] === 'qr_raw') {
                 $qrKey = $data[0]['key'];
 
-                // 2. Perform Database Logic in Laravel
+                // Find the item and the user/session associated with it
                 $item = LockerItem::where('key', $qrKey)
-                    ->with('session') // Get the session to find locker_id
+                    ->with(['session.user'])
                     ->first();
-
                 if (!$item) {
                     return response()->json([['type' => 'qr_error', 'result' => 'QR Key Tidak Valid']]);
                 }
 
-                // Check if already opened (1 = Fresh/Unopened, 0 = Used)
-                if ($item->opened_by_sender == 0) {
-                    return response()->json([['type' => 'qr_error', 'result' => 'Loker ini sudah pernah dibuka']]);
-                }
-
-                // 3. Success: Update status and return the locker_id
                 $item->update(['opened_by_sender' => 0]);
+                // Optional: Logic to prevent double-opening if needed
+                // if ($item->opened_by_sender == 0) ...
 
+                // IMPORTANT: Return the data structure the JS expects
                 return response()->json([[
                     'type' => 'qr_success',
+                    'user_id' => $item->session->user_id,
+                    'name' => $item->session->user->name ?? 'User',
+                    // We send this so the JS knows which specific unit triggered it,
+                    // but we will still fetch ALL active units for this user.
                     'locker_id' => $item->session->locker_id
                 ]]);
             }
 
-            // If it wasn't a QR, return the original data (for face recognition fallback)
             return response()->json($data);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Connection to AI Server failed'], 500);

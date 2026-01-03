@@ -69,7 +69,6 @@
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
-            /* Mirror effect */
         }
 
         #status {
@@ -80,7 +79,6 @@
             margin-top: 10px;
         }
 
-        /* Locker Information Styling */
         #locker-info {
             margin-top: 20px;
             width: 100%;
@@ -115,18 +113,6 @@
             align-items: center;
             min-width: 120px;
             transition: transform 0.2s;
-        }
-
-        .locker-card:hover {
-            transform: scale(1.05);
-        }
-
-        .locker-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-            color: #3b82f6;
         }
 
         .scan-line {
@@ -164,7 +150,6 @@
             }
         }
 
-        /* Initial state for canvas */
         canvas#captureCanvas {
             display: none;
         }
@@ -212,19 +197,17 @@
         const timerDisplay = document.getElementById('timer');
 
         let isProcessingSuccess = false;
+        let isAnalyzing = false;
 
-        /**
-         * Initialize the webcam stream
-         */
         async function initScanner() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: {
-                            ideal: 1280
+                            ideal: 1920
                         },
                         height: {
-                            ideal: 720
+                            ideal: 1080
                         },
                         facingMode: "user"
                     }
@@ -239,9 +222,6 @@
             }
         }
 
-        /**
-         * Main Loop: Captures frames and sends them to the Flask AI Server
-         */
         async function captureAndScan() {
             if (isProcessingSuccess) return;
 
@@ -273,7 +253,7 @@
 
                             if (res.type === "qr_success") {
                                 handleSuccess(`QR Verified: Unit #${res.locker_id}`, [res.locker_id],
-                                    "QR Code Accepted");
+                                    "QR Code Accepted", res.user_id);
                             } else if (res.type === "qr_error") {
                                 status.innerText = res.result;
                                 status.style.color = "#dc3545";
@@ -308,7 +288,7 @@
 
                 if (lockers.length > 0) {
                     const lockerIds = lockers.map(l => l.locker_id);
-                    handleSuccess(`Welcome back, ${name}`, lockerIds, `Your active units are ready:`);
+                    handleSuccess(`Welcome back, ${name}`, lockerIds, `Your active units are ready:`, userId);
                 } else {
                     handleSuccess(`Welcome, ${name}`, [], `You have no active lockers.`);
                 }
@@ -341,10 +321,28 @@
             }
         }
 
+        async function updateLockerStatusInDB(lockerIds, userId) {
+            try {
+                await fetch('/lockers/update-statuses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        locker_ids: lockerIds,
+                        user_id: userId
+                    })
+                });
+            } catch (e) {
+                console.error("DB Update Failed:", e);
+            }
+        }
+
         /**
          * UI Handler for successful access: Stops camera, freezes frame, shows countdown
          */
-        async function handleSuccess(statusText, lockerIds, welcomeText) {
+        async function handleSuccess(statusText, lockerIds, welcomeText, userId) {
             isProcessingSuccess = true;
 
             // 1. Freeze the last frame
@@ -377,6 +375,9 @@
 
                 // --- NEW: Send to Local Locker Hardware Controller ---
                 sendToLockerController(lockerIds);
+                if (userId) {
+                    updateLockerStatusInDB(lockerIds, userId);
+                }
             } else {
                 lockerList.innerHTML = '';
             }

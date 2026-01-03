@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\LockerBookingController;
 use App\Http\Controllers\NotificationController;
+use App\Models\Locker;
 use App\Models\LockerSession;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,10 +33,10 @@ Route::post('/login', function (\Illuminate\Http\Request $request) {
 });
 
 
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
-Route::middleware('auth')->group(function() {
+Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/{id}', [NotificationController::class, 'show']);
@@ -47,7 +48,6 @@ Route::middleware('auth')->group(function() {
     Route::put('/booking/{booking}/assign-user', [LockerBookingController::class, 'assignUser'])->name('booking.assignUser');
     Route::get('/booking/{booking}/assign-user', [LockerBookingController::class, 'showAssignUserForm'])->name('booking.showAssignUserForm');
     Route::post('/booking/{booking}/release', [LockerBookingController::class, 'releaseLocker'])->name('booking.release');
-
 });
 
 Route::get('/kiosk', function () {
@@ -59,10 +59,38 @@ Route::get('/users/{userId}/active-lockers', function ($userId) {
     return LockerSession::where('status', 'active')
         ->where(function ($query) use ($userId) {
             $query->where('user_id', $userId)
-                  ->orWhere('assigned_taker_id', $userId);
+                ->orWhere('assigned_taker_id', $userId);
         })
         ->get(['locker_id']);
 });
+
+Route::post('/lockers/update-statuses', function (\Illuminate\Http\Request $request) {
+    $lockerIds = $request->input('locker_ids', []);
+    $userId = $request->input('user_id');
+
+    if (empty($lockerIds) || !$userId) {
+        return response()->json(['message' => 'Missing locker IDs or user ID'], 400);
+    }
+
+    // 1. Update lockers ke 'available'
+    Locker::whereIn('id', $lockerIds)->update(['status' => 'available']);
+
+    // 2. Ambil session aktif dan update pakai each() biar observer jalan
+    LockerSession::where('status', 'active')
+        ->where(function ($query) use ($userId) {
+            $query->where('user_id', $userId)
+                  ->orWhere('assigned_taker_id', $userId);
+        })
+        ->get()
+        ->each(function ($session) {
+            $session->status = 'done';
+            $session->taken_at = now();
+            $session->save(); // observer updated() akan terpanggil
+        });
+
+    return response()->json(['message' => 'Statuses updated successfully']);
+});
+
 
 // HISTORY (SESSION-BASED)
 Route::resource('/history', HistoryController::class)

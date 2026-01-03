@@ -58,37 +58,30 @@ class LockerSessionObserver
             }
         }
 
-        // SESSION DONE / RELEASE MANUAL
+        // // SESSION DONE / RELEASE MANUAL
         if ($session->wasChanged('status') && $session->status === 'done') {
-            $lockerCode = optional($session->locker)->id ?? 'Unknown';
+            // $lockerCode = optional($session->locker)->id ?? 'Unknown';
 
-            Notification::create([
-                'user_id' => $session->user_id,
-                'title'   => "Penggunaan locker {$lockerCode} telah selesai",
-                'type'    => 'session_done',
-                'is_read' => false,
-            ]);
+            // Notification::create([
+            //     'user_id' => $session->user_id,
+            //     'title'   => "Penggunaan locker {$lockerCode} telah selesai",
+            //     'type'    => 'session_done',
+            //     'is_read' => false,
+            // ]);
 
-            if ($user && $user->phone) {
-                $msg = "PERINGATAN: Booking locker {$lockerCode} Anda telah expired.";
-                \App\Http\Controllers\NotificationController::sendWhatsApp($user->phone, $msg);
-            }
-        }
-
-
-        if ($session->wasChanged('taken_at') && $session->taken_at !== null) {
-
+            // if ($user && $user->phone) {
+            
+            //     $msg = "PERINGATAN: Booking locker {$lockerCode} Anda telah expired.";
+            //     \App\Http\Controllers\NotificationController::sendWhatsApp($user->phone, $msg);
+            // }
             $takenByName = optional($session->assignedTaker)->name ?? 'Unknown';
             $lockerCode = optional($session->locker)->id ?? 'Unknown';
+            $itemNames = $session->items->pluck('item_name')->implode(', ') ?: 'Barang';
 
-            // Gabung nama barang
-            $itemNames = $session->items
-                ->pluck('item_name')
-                ->implode(', ') ?: 'Barang';
-
+            // Buat notif di DB
             Notification::create([
                 'user_id' => $session->user_id,
-                'locker_item_id' => null, // notif level session
+                'locker_item_id' => null,
                 'title' => "Barang ({$itemNames}) di locker {$lockerCode} telah diambil oleh {$takenByName}. Penggunaan locker selesai.",
                 'data' => [
                     'taken_by' => $takenByName,
@@ -99,11 +92,19 @@ class LockerSessionObserver
                 'is_read' => false,
             ]);
 
+            // Kirim WA kalau ada nomor
             if ($session->user && $session->user->phone) {
                 $msg = "Barang Anda ({$itemNames}) di locker {$lockerCode} telah diambil oleh {$takenByName}.";
                 \App\Http\Controllers\NotificationController::sendWhatsApp($session->user->phone, $msg);
             }
         }
+
+        // if ($session->wasChanged('taken_at') && $session->taken_at != null)
+        //      {
+
+
+
+        // }
     }
 
     /**

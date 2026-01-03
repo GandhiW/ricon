@@ -9,7 +9,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from insightface.app import FaceAnalysis
 from scipy.spatial.distance import cosine
-import pywhatkit as kit
+import webbrowser
+import pyautogui
+import time
 import datetime
 
 app = Flask(__name__)
@@ -24,7 +26,7 @@ db_config = {
 }
 
 # --- 2. INITIALIZE MODELS ---
-# Optimized for your RTX 3050
+# Optimized for RTX 3050
 app_model = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 app_model.prepare(ctx_id=0, det_size=(640, 640))
 qr_detector = cv2.QRCodeDetector()
@@ -32,31 +34,22 @@ qr_detector = cv2.QRCodeDetector()
 def get_db_connection():
     return mysql.connector.connect(**db_config)
 
-# Use relative paths or environment variables to avoid hardcoding C:/ paths
 QR_STORAGE_PATH = os.path.join(os.getcwd(), "public", "qrcodes")
 if not os.path.exists(QR_STORAGE_PATH):
     os.makedirs(QR_STORAGE_PATH)
 
-# gres test
 @app.route('/generate-qr', methods=['POST'])
 def generate_qr():
     data = request.json
-
-    # Pastikan mengambil locker_session_id
     ls_id = str(data.get('locker_session_id'))
     item_detail = str(data.get('item_detail') or "barang").replace(" ", "_")
     key_data = data.get('key')
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-
-    # Nama folder tetap locker_{id_session}
     folder_name = f"locker_{ls_id}"
     target_folder = os.path.join(project_root, "public", "images", "qr", folder_name)
 
-
     os.makedirs(target_folder, exist_ok=True)
-
-    # Nama file unik per item detail
     file_name = f"qr_{item_detail}.png"
     file_path = os.path.join(target_folder, file_name)
 
@@ -67,8 +60,6 @@ def generate_qr():
         "status": "success",
         "relative_path": f"images/qr/{folder_name}/{file_name}"
     })
-
-
 
 @app.route('/recognize', methods=['POST'])
 def recognize():
@@ -82,13 +73,12 @@ def recognize():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # STEP A: ONLY DECODE QR
+        # STEP A: QR DECODE (Priority)
         qr_data, points, _ = qr_detector.detectAndDecode(img)
         if qr_data:
             return jsonify([{"type": "qr_raw", "key": qr_data}])
 
-        # STEP B: FACE RECOGNITION FALLBACK
-        # Threshold adjusted to 0.45 for better security on buffalo_l
+        # STEP B: FACE RECOGNITION (Fallback)
         best_name, best_id, min_dist = "STRANGER", None, 0.45
         faces = app_model.get(img)
 
@@ -107,9 +97,6 @@ def recognize():
         cursor.close()
         conn.close()
 
-import webbrowser
-import pyautogui
-import time
 @app.route('/send-whatsapp', methods=['POST'])
 def send_whatsapp():
     data = request.json
@@ -119,8 +106,14 @@ def send_whatsapp():
     try:
         whatsapp_url = f"https://web.whatsapp.com/send?phone={phone_no}&text={message.replace(' ', '%20')}"
         webbrowser.open(whatsapp_url)
-        time.sleep(7) # Waktu tunggu loading WA Web
+
+        # Wait for WhatsApp Web to fully load
+        time.sleep(12)
+
+        # Send Message
         pyautogui.press('enter')
+        time.sleep(2)
+
         return jsonify({"status": "success"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

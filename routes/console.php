@@ -1,8 +1,97 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Models\LockerSession;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Schedule::call(function () {
+//     Log::info('=== CHECKING LOCKER STATUS ===');
+
+//     // Ambil session yang masih aktif (menunggu barang)
+//     $sessions = LockerSession::whereIn('status', ['active'])->get();
+
+//     foreach ($sessions as $session) {
+//         try {
+//             // 1. Hit API IOT
+//             $response = Http::timeout(5)->get('http://192.168.18.102:2200/api/locker');
+//             if (!$response->ok()) continue;
+
+//             if () {
+
+//             }
+//             $sensor = $response->json('locker1'); // 'KOSONG' atau 'ADA_BARANG'
+
+//             /* Gunakan created_at sebagai patokan karena kamu
+//                hanya butuh durasi sejak awal booki
+//                ng.
+//             */
+//             $minutesSinceBooking = $session->created_at->diffInMinutes(now());
+
+//             // --- LOGIKA 1: JIKA MASIH KOSONG SEJAK BOOKING ---
+//             if ($session->status === 'active' && $sensor === 'KOSONG') {
+//                 if ($minutesSinceBooking >= 3) {
+//                     autoRelease($session, 'EXPIRED_NO_ITEM');
+//                     Log::warning("Loker {$session->locker_id} hangus karena 3 menit tidak taruh barang.");
+//                 }
+//             }
+
+//             // // --- LOGIKA 3: PENGAMBILAN AKHIR (RELEASE) ---
+//             // // Jika status sudah filled, lalu sensor jadi KOSONG (berarti barang diambil)
+//             // if ($session->status === 'filled' && $sensor === 'KOSONG') {
+//             //     autoRelease($session, 'SUCCESS_TAKEN');
+//             //     Log::info("Barang di Loker {$session->locker_id} sudah diambil. Sesi selesai.");
+//             // }
+
+//         } catch (\Throwable $e) {
+//             Log::error('Scheduler Error: ' . $e->getMessage());
+//         }
+//     }
+// })->everyMinute();
+
+Schedule::call(function () {
+    Log::info('=== CHECKING LOCKER STATUS ===');
+
+    $sessions = LockerSession::where('status', 'active')->get();
+
+    foreach ($sessions as $session) {
+        try {
+            $response = Http::timeout(5)->get('http://192.168.18.102:2200/api/locker');
+            if (! $response->ok()) continue;
+
+            // 🔑 Ambil sensor sesuai locker_id 
+            $lockerKey = 'locker' . $session->locker_id;
+            $sensor = $response->json($lockerKey);
+
+            if ($sensor === null) {
+                Log::warning("Sensor {$lockerKey} tidak ditemukan");
+                continue;
+            }
+
+            $minutesSinceBooking = $session->created_at->diffInMinutes(now());
+
+            // ⏱️ 3 menit tidak isi barang
+            if ($sensor === 'KOSONG' && $minutesSinceBooking >= 3) {
+                autoRelease($session);
+                Log::warning("Loker {$session->locker_id} expired (tidak diisi).");
+            }
+
+        } catch (\Throwable $e) {
+            Log::error('Scheduler Error: ' . $e->getMessage());
+        }
+    }
+})->everyMinute();
+
+// Helper function tetap di luar call() atau buat di file terpisah
+function autoRelease($session) {
+    DB::transaction(function () use ($session) {
+        // Update status session jadi 'completed' atau 'expired'
+        $session->update([
+            'status' => 'expired'
+        ]);
+
+        // Kembalikan loker agar bisa dipakai orang lain
+        $session->locker()->update(['status' => 'available']);
+    });
+}
