@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-
+use GuzzleHttp\Promise\PromiseInterface;
 //grs test
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -117,6 +117,7 @@ class LockerBookingController extends Controller
      */
     public function show(LockerSession $booking)
     {
+
         // Diambil dari kode baru
         $booking->load('items');
         return view('manage_locker', compact('booking'));
@@ -216,7 +217,6 @@ class LockerBookingController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        // contoh: simpan ke kolom assigned_taker_id
         $booking->assigned_taker_id = $request->user_id;
         $booking->save();
 
@@ -227,7 +227,6 @@ class LockerBookingController extends Controller
 
     public function releaseLocker(LockerSession $booking)
     {
-        // Pastikan yang melepas adalah pemilik booking
         if ($booking->user_id !== Auth::id()) {
             abort(403);
         }
@@ -248,6 +247,35 @@ class LockerBookingController extends Controller
             ->route('dashboard')
             ->with('success', 'Loker berhasil dilepaskan. Anda dapat memesan loker kembali.');
     }
+
+    public function getIotData()
+    {
+        try {
+            $response = Http::get('http://127.0.0.1:2200/api/locker');
+
+            //Kalau ternyata Promise → tunggu hasilnya
+            if ($response instanceof PromiseInterface) {
+                $response = $response->wait();
+            }
+
+            // Sekarang ini ResponseInterface (Guzzle)
+            $status = $response->getStatusCode();
+            $body   = json_decode((string) $response->getBody(), true);
+
+            return response()->json([
+                'success' => $status === 200,
+                'status'  => $status,
+                'data'    => $body,
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
     public function verifyQrCode(Request $request)
     {
