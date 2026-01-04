@@ -29,7 +29,7 @@ Schedule::call(function () {
 
             // ⏱️ 3 menit tidak isi barang
             if ($sensor === 'KOSONG' && $minutesSinceBooking >= 3) {
-                autoRelease($session);
+                autoReleaseExpired($session);
                 Log::warning("Loker {$session->locker_id} expired (tidak diisi).");
             }
 
@@ -40,7 +40,7 @@ Schedule::call(function () {
 })->everyMinute();
 
 // Helper function tetap di luar call() atau buat di file terpisah
-function autoRelease($session) {
+function autoReleaseExpired($session) {
     DB::transaction(function () use ($session) {
         // Update status session jadi 'completed' atau 'expired'
         $session->update([

@@ -12,9 +12,9 @@ class DatabaseSeeder extends Seeder
        $this->call([
             UserSeeder::class,
             LockerSeeder::class,
-            LockerSessionSeeder::class,
-            LockerItemSeeder::class,
-            NotificationSeeder::class,
+            // LockerSessionSeeder::class,
+            // LockerItemSeeder::class,
+            // NotificationSeeder::class,
         ]);
     }
 

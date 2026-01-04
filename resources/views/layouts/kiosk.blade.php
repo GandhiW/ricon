@@ -300,22 +300,30 @@
         // Sends the list of locker IDs to the local hardware bridge
         async function sendToLockerController(lockerIds) {
             try {
-                console.log("Sending command to unlock:", lockerIds);
-                const response = await fetch('http://localhost:2200/api/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        lockers: lockerIds
-                    })
-                });
+                for (const lockerId of lockerIds) {
+                    const message = `0123_${lockerId}`;
+                    
 
-                if (!response.ok) throw new Error('Hardware controller unreachable');
-                console.log("Unlock signal sent successfully");
+                    console.log("Sending command:", message);
+
+                    const response = await fetch('http://192.168.18.102:2200/api/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message // ⬅️ HARUS message
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Hardware controller unreachable');
+                    }
+                }
+
+                console.log("All unlock signals sent successfully");
             } catch (err) {
                 console.error("Hardware Error:", err);
-                // Optional: Update status to show hardware error
                 status.innerText += " (Hardware Error)";
                 status.style.color = "#dc3545";
             }
