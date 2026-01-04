@@ -176,8 +176,8 @@
             </div>
         </div>
 
-        {{-- INFO CARDS (GABUNGAN)
-        <div class="col-lg-6">
+        {{-- INFO CARDS (GABUNGAN) --}}
+        {{-- <div class="col-lg-6">
             <div class="card p-4 text-center">
                 <h4 class="fw-bold mb-3">Pesan Loker</h4>
                 <img src="https://cdn-icons-png.flaticon.com/512/3050/3050525.png" alt="Locker" style="max-width:200px"

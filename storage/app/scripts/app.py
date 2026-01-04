@@ -9,6 +9,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from insightface.app import FaceAnalysis
 from scipy.spatial.distance import cosine
+import webbrowser
+import pyautogui
+import time
+import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -22,7 +26,7 @@ db_config = {
 }
 
 # --- 2. INITIALIZE MODELS ---
-# Optimized for your RTX 3050
+# Optimized for RTX 3050
 app_model = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 app_model.prepare(ctx_id=0, det_size=(640, 640))
 qr_detector = cv2.QRCodeDetector()
@@ -53,12 +57,15 @@ def favicon():
 
 # --- 4. FUNCTIONAL ROUTES ---
 
+# @app.route('/generate-qr', methods=['POST'])
+# def generate_qr():
+#     data = request.json
+#     if not data:
+#         return jsonify({"error": "No JSON data provided"}), 400
+
 @app.route('/generate-qr', methods=['POST'])
 def generate_qr():
     data = request.json
-    if not data:
-        return jsonify({"error": "No JSON data provided"}), 400
-
     ls_id = str(data.get('locker_session_id'))
     item_detail = str(data.get('item_detail') or "barang").replace(" ", "_")
     key_data = data.get('key')
@@ -92,12 +99,11 @@ def recognize():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # STEP A: ONLY DECODE QR
+        # STEP A: QR DECODE (Priority)
         qr_data, points, _ = qr_detector.detectAndDecode(img)
         if qr_data:
             return jsonify([{"type": "qr_raw", "key": qr_data}])
 
-        # STEP B: FACE RECOGNITION FALLBACK
         best_name, best_id, min_dist = "STRANGER", None, 0.45
         faces = app_model.get(img)
 
@@ -115,6 +121,27 @@ def recognize():
     finally:
         cursor.close()
         conn.close()
+
+@app.route('/send-whatsapp', methods=['POST'])
+def send_whatsapp():
+    data = request.json
+    phone_no = data.get('phone')
+    message = data.get('message')
+
+    try:
+        whatsapp_url = f"https://web.whatsapp.com/send?phone={phone_no}&text={message.replace(' ', '%20')}"
+        webbrowser.open(whatsapp_url)
+
+        # Wait for WhatsApp Web to fully load
+        time.sleep(12)
+
+        # Send Message
+        pyautogui.press('enter')
+        time.sleep(2)
+
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     # host='0.0.0.0' allows your S25 Ultra to connect via local IP

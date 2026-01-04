@@ -63,6 +63,7 @@
     @method('PUT')
         {{-- INFORMASI ITEM --}}
         <div class="card p-4 mb-4">
+            
             <h5 class="mb-3 fw-semibold">Informasi Barang</h5>
 
             <div class="mb-3">

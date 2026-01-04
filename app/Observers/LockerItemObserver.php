@@ -40,14 +40,11 @@ class LockerItemObserver
     {
         $item->load('session');
         $userId = optional($item->session)->user_id;
+        $user = optional($item->session)->user;
 
-        if (
-            (int)$item->opened_by_sender === 0
-            && $userId
-            && !Notification::where('locker_item_id', $item->id)->exists()
-        ) {
-
+        if ($item->wasChanged('opened_by_sender') && (int)$item->opened_by_sender === 0) {
             Notification::create([
+
                 'user_id' => $userId,
                 'locker_item_id' => $item->id,
                 'title' => "Barang {$item->item_name} telah masuk ke loker",
@@ -58,6 +55,8 @@ class LockerItemObserver
                 ],
                 'is_read' => false
             ]);
+            $waMessage = "Halo {$user->name}, barang '{$item->item_name}' telah berhasil dimasukkan ke loker. Silahkan buka website MyBox untuk mendownload receipt.";
+            \App\Http\Controllers\NotificationController::sendWhatsApp($user->phone ?? "null", $waMessage);
         }
     }
 

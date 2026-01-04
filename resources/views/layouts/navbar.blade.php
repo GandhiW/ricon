@@ -41,12 +41,28 @@
                     <div class="p-3 text-center text-muted">Loading...</div>
                 </div>
 
-                <!-- PROFILE -->
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle text-white d-flex justify-content-center align-items-center"
-                        style="width:38px;height:38px color: #4a8ebb;">👤</div>
-                    <span class="fw-semibold text-secondary">{{ Auth::check() ? Auth::user()->name : 'Guest' }}</span>
+                <!-- PROFILE DROPDOWN -->
+                <div class="dropdown">
+                    <a class="d-flex align-items-center gap-2 text-decoration-none text-secondary" href="#"
+                        role="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="rounded-circle text-white d-flex justify-content-center align-items-center"
+                            style="width:38px;height:38px; color: #4a8ebb;">👤</div>
+                        <span class="fw-semibold">{{ Auth::check() ? Auth::user()->name : 'Guest' }}</span>
+                    </a>
+
+                    @if (Auth::check())
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                            <li>
+                                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    @endif
                 </div>
+
+
             </div>
         </div>
     </div>

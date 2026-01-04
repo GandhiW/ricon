@@ -17,6 +17,7 @@ class UserSeeder extends Seeder
             'name' => 'Kadek Artika',
             'udomain' => 'u111111',
             'password' => Hash::make('password'),
+            'phone' => '6283178723263'
         ]);
 
         User::create([
